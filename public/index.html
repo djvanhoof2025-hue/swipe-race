@@ -5,89 +5,172 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Swipe Race</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Простая библиотека QR через CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <div class="bg"></div>
-  <main class="wrap">
+  
+  <!-- ЭКРАН 1: Инструкция + IP -->
+  <div id="screen-connect" class="screen active">
+    <div class="card">
+      <h1>🎮 Swipe Race</h1>
+      <p class="step">ШАГ 1: Подключись к Wi-Fi</p>
+      <div class="wifi-box">
+        <b>Сеть:</b> SwipeRace<br>
+        <b>Пароль:</b> game1234
+      </div>
+      
+      <p class="step">ШАГ 2: Открой адрес в браузере</p>
+      <div class="ip-box" id="server-ip">http://...</div>
+      <button class="btn" onclick="copyIP()">📋 Скопировать</button>
+      
+      <p class="hint">После подключения нажми "Я в сети"</p>
+      <button class="btn primary" onclick="showScreen('screen-login')">✅ Я подключился</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 2: Вход -->
+  <div id="screen-login" class="screen">
+    <div class="card">
+      <h2>👋 Привет!</h2>
+      <input type="text" id="pname" placeholder="Твоё имя" value="Игрок">
+      
+      <div class="teams">
+        <div class="team sel" data-t="boys" onclick="pickTeam('boys')">👦 Мальчики</div>
+        <div class="team" data-t="girls" onclick="pickTeam('girls')">👧 Девочки</div>
+      </div>
+      
+      <button class="btn primary" onclick="joinGame()">🚀 Войти</button>
+      <button class="btn" onclick="showScreen('screen-connect')">⬅️ Назад</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 3: Игра -->
+  <div id="screen-game" class="screen">
+    <header>
+      <div class="sc b">👦 <span id="cb">0</span></div>
+      <div class="sc g">👧 <span id="cg">0</span></div>
+    </header>
     
-    <!-- ШАГ 1: WiFi -->
-    <section id="step1" class="step active">
-      <div class="card">
-        <span class="tag">1 из 2</span>
-        <h2>📶 Подключись к Wi-Fi</h2>
-        <div id="qr-wifi" class="qr-box"></div>
-        <p class="txt">Сеть: <b>SwipeRace</b><br>Пароль: <b>game1234</b></p>
-        <button class="btn primary" onclick="nextStep(2)">Далее ➡️</button>
-      </div>
-    </section>
+    <div class="track">
+      <div class="ln"></div>
+      <div class="bl b" id="blb"></div>
+      <div class="bl g" id="blg"></div>
+      <div class="fin"></div>
+    </div>
 
-    <!-- ШАГ 2: Игра -->
-    <section id="step2" class="step">
-      <div class="card">
-        <span class="tag">2 из 2</span>
-        <h2>🌐 Открой игру</h2>
-        <div id="qr-game" class="qr-box"></div>
-        <p class="txt" id="game-url">Адрес: ...</p>
-        <button class="btn success" onclick="enterGame()">🚀 Войти</button>
-        <button class="btn secondary" onclick="nextStep(1)">⬅️ Назад</button>
-      </div>
-    </section>
+    <!-- Лобби -->
+    <div id="ui-wait" class="panel">
+      <div class="spin"></div>
+      <p>Ждём старт от ведущего...</p>
+      <small id="players-info"></small>
+    </div>
 
-    <!-- ШАГ 3: Игра/Лобби -->
-    <section id="step3" class="step">
-      <div class="game-ui">
-        <header>
-          <div class="counter boys">👦 <span id="cnt-b">0</span></div>
-          <div class="counter girls">👧 <span id="cnt-g">0</span></div>
-        </header>
-        
-        <div class="track">
-          <div class="line"></div>
-          <div class="ball boys" id="ball-b"></div>
-          <div class="ball girls" id="ball-g"></div>
-          <div class="finish"></div>
-        </div>
+    <!-- Свайп -->
+    <div id="ui-play" class="swipe hide">
+      <span class="cnt" id="mc">0</span>
+      <div class="ic">⬆️</div>
+      <p>Свайпай вверх!</p>
+    </div>
 
-        <!-- Лобби -->
-        <div id="lobby" class="panel">
-          <div class="loader"></div>
-          <h3>Выбери команду</h3>
-          <div class="teams">
-            <div class="team-btn boys" onclick="setTeam('boys')">👦 Мальчики</div>
-            <div class="team-btn girls" onclick="setTeam('girls')">👧 Девочки</div>
-          </div>
-          <input type="text" id="pname" placeholder="Имя" value="Игрок">
-          <button class="btn ok" onclick="joinGame()">✅ Готов</button>
-        </div>
+    <button class="btn restart" onclick="location.reload()">🔄 Заново</button>
+  </div>
 
-        <!-- Ожидание -->
-        <div id="waiting" class="panel hide">
-          <div class="loader"></div>
-          <h3>⏳ Ждём старт...</h3>
-          <p id="ready-info"></p>
-        </div>
-
-        <!-- Свайп зона -->
-        <div id="swipe" class="swipe-zone hide">
-          <span class="swipe-count" id="my-count">0</span>
-          <div class="swipe-icon">⬆️</div>
-          <p>Свайпай вверх!</p>
-        </div>
-
-        <button class="btn restart" onclick="location.reload()">🔄 Заново</button>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Ссылка на админку в футере -->
-  <footer class="admin-link">
-    <a href="/admin.html">🔐 Вход для ведущего</a>
-  </footer>
+  <!-- Ссылка на админку -->
+  <div class="admin-link">
+    <a href="/admin.html">🔐 Админка</a>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="game.js"></script>
+  <script>
+    const socket = io();
+    let team = 'boys', playing = false, swipes = 0, myName = 'Игрок';
+    let serverIP = '';
+
+    // Получаем IP при загрузке
+    fetch('/api/ip').then(r=>r.json()).then(d=>{
+      serverIP = d.url;
+      document.getElementById('server-ip').textContent = d.url;
+    }).catch(()=>{
+      document.getElementById('server-ip').textContent = 'http://192.168.43.1:3000';
+    });
+
+    // Навигация
+    window.showScreen = id => {
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    };
+
+    window.copyIP = () => {
+      navigator.clipboard?.writeText(serverIP).then(()=>{
+        const btn = event.target;
+        const old = btn.textContent;
+        btn.textContent = '✅ Скопировано!';
+        setTimeout(()=>btn.textContent=old, 1500);
+      });
+    };
+
+    window.pickTeam = t => {
+      team = t;
+      document.querySelectorAll('.team').forEach(el=>el.classList.remove('sel'));
+      document.querySelector(`.team[data-t="${t}"]`).classList.add('sel');
+    };
+
+    window.joinGame = () => {
+      myName = document.getElementById('pname').value.trim() || 'Игрок';
+      socket.emit('join', { name: myName, team });
+      showScreen('screen-game');
+    };
+
+    // Сокеты
+    socket.on('playersCount', ({boys, girls}) => {
+      document.getElementById('cb').textContent = boys;
+      document.getElementById('cg').textContent = girls;
+      document.getElementById('players-info').textContent = `Онлайн: ${boys+girls}`;
+    });
+
+    socket.on('start', () => {
+      playing = true;
+      document.getElementById('ui-wait').classList.add('hide');
+      document.getElementById('ui-play').classList.remove('hide');
+    });
+
+    socket.on('score', ({team:t, count}) => {
+      const p = Math.min(count/50, 1);
+      document.getElementById(t==='boys'?'blb':'blg').style.left = `${5+p*80}%`;
+    });
+
+    socket.on('gameOver', ({winner}) => {
+      playing = false;
+      document.getElementById('ui-play').innerHTML = `<h2>🏆 ${winner==='boys'?'👦':'👧'} победили!</h2>`;
+    });
+
+    socket.on('reset', () => location.reload());
+    socket.on('error', msg => alert(msg));
+
+    // Свайпы
+    let sy = 0;
+    const zone = document.getElementById('ui-play');
+    if(zone) {
+      zone.addEventListener('touchstart', e=>{ sy=e.touches[0].clientY; e.preventDefault(); }, {passive:false});
+      zone.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+      zone.addEventListener('touchend', e=>{
+        if(playing && sy - e.changedTouches[0].clientY > 30) doSwipe();
+        e.preventDefault();
+      });
+      zone.addEventListener('mousedown', e=>sy=e.clientY);
+      zone.addEventListener('mouseup', e=>{ if(playing && sy-e.clientY>30) doSwipe(); });
+    }
+
+    function doSwipe() {
+      swipes++;
+      document.getElementById('mc').textContent = swipes;
+      socket.emit('swipe', {team});
+      // Эффект
+      const b = document.createElement('div');
+      b.className='burst'; b.textContent=team==='boys'?'💧':'🌸';
+      zone.appendChild(b);
+      setTimeout(()=>b.remove(), 400);
+    }
+  </script>
 </body>
 </html>

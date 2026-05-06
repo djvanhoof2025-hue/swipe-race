@@ -6,42 +6,44 @@
   <title>🔐 Ведущий</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .adm { max-width:420px; margin:0 auto; padding:20px; }
-    .card { background:var(--card); padding:20px; border-radius:16px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1); }
-    .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.1); }
-    .btn-a { width:100%; padding:12px; border:none; border-radius:10px; cursor:pointer; font-weight:600; margin:5px 0; }
-    .start { background:linear-gradient(90deg,#10b981,#059669); color:#fff; }
-    .reset { background:linear-gradient(90deg,#ef4444,#dc2626); color:#fff; }
-    .demo { background:rgba(139,92,246,0.2); color:#fff; display:flex; gap:8px; }
-    .pwd { width:100%; padding:10px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; margin-bottom:10px; }
-    .hide { display:none !important; }
+    .wrap { max-width:420px; width:100%; padding:20px; }
+    .card { margin-bottom:12px; }
+    .row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .row:last-child { border:none; }
+    .pwd { width:100%; padding:10px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:8px; margin:10px 0; }
+    .btn-a { width:100%; padding:12px; border:none; border-radius:10px; cursor:pointer; font-weight:600; margin:5px 0; background:rgba(255,255,255,0.12); color:#fff; }
+    .start { background:linear-gradient(90deg,#10b981,#059669); }
+    .reset { background:linear-gradient(90deg,#ef4444,#dc2626); }
+    .demo { display:flex; gap:8px; }
     .badge { padding:2px 6px; border-radius:4px; font-size:10px; background:#10b981; color:#fff; }
+    .hide { display:none !important; }
   </style>
 </head>
 <body>
   <div class="bg"></div>
-  <div class="adm">
+  <div class="wrap">
+    
     <!-- Вход -->
     <div id="login" class="card">
-      <h2 style="text-align:center;margin-bottom:14px">🔐 Ведущий</h2>
-      <input type="password" id="pwd" class="pwd" placeholder="Пароль (3793)">
-      <button class="btn-a start" onclick="check()">Войти</button>
+      <h2 style="text-align:center">🔐 Ведущий</h2>
+      <input type="password" id="pwd" class="pwd" placeholder="Пароль: 3793">
+      <button class="btn-a primary" onclick="check()">Войти</button>
       <p id="err" class="hide" style="color:#ef4444;text-align:center;margin-top:8px">❌ Неверный пароль</p>
     </div>
 
     <!-- Панель -->
     <div id="panel" class="hide">
       <div class="card">
-        <h3 style="margin-bottom:10px">📊 Статус</h3>
+        <h3>📊 Статус</h3>
         <div class="row"><span>Игроки</span><span><span id="pb">0</span> 👦 | <span id="pg">0</span> 👧</span></div>
         <div class="row"><span>Свайпы 🔵</span><span id="sb" class="badge">0</span></div>
         <div class="row"><span>Свайпы 🔴</span><span id="sg" class="badge" style="background:#ef4444">0</span></div>
         <div class="row"><span>Статус</span><span id="st">Ожидание</span></div>
       </div>
       <div class="card">
-        <h3 style="margin-bottom:10px">🎮 Управление</h3>
-        <button class="btn-a start" onclick="send('start')">▶️ Начать</button>
-        <button class="btn-a reset" onclick="send('reset')">🔄 Сброс</button>
+        <h3>🎮 Управление</h3>
+        <button class="btn-a start" onclick="send('start')">▶️ Начать игру</button>
+        <button class="btn-a reset" onclick="send('reset')">🔄 Сбросить</button>
         <div style="background:rgba(139,92,246,0.1);padding:10px;border-radius:8px;margin-top:10px">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px"><strong>🎭 Демо</strong><small>Тест</small></div>
           <div class="demo">
@@ -50,8 +52,9 @@
           </div>
         </div>
       </div>
-      <a href="/" class="btn-a" style="background:rgba(255,255,255,0.15);color:#fff;display:block;text-align:center;text-decoration:none;padding:12px;border-radius:10px;">🏠 На главную</a>
+      <a href="/" class="btn-a" style="display:block;text-align:center;text-decoration:none">🏠 На главную</a>
     </div>
+
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -59,14 +62,12 @@
     const sk = io(); let pwd = '';
     function check() {
       pwd = document.getElementById('pwd').value;
-      if (pwd === '3793') {
+      if(pwd === '3793') {
         document.getElementById('login').classList.add('hide');
         document.getElementById('panel').classList.remove('hide');
-      } else {
-        document.getElementById('err').classList.remove('hide');
-      }
+      } else document.getElementById('err').classList.remove('hide');
     }
-    function send(act, t=null) { sk.emit('admin', { action: act, password: pwd, demoTeam: t }); }
+    function send(a,t=null) { sk.emit('admin', {action:a, password:pwd, demoTeam:t}); }
     sk.on('playersCount', ({boys,girls}) => { document.getElementById('pb').textContent=boys; document.getElementById('pg').textContent=girls; });
     sk.on('score', ({team,count}) => document.getElementById(team==='boys'?'sb':'sg').textContent=count);
     sk.on('start', () => document.getElementById('st').textContent='🟢 Игра идёт');
@@ -74,7 +75,6 @@
     sk.on('gameOver', ({winner}) => document.getElementById('st').textContent=`🏆 ${winner==='boys'?'👦':'👧'} победили!`);
     sk.on('adminOk', m => alert('✅ '+m));
     sk.on('adminError', m => alert('❌ '+m));
-    // Enter для пароля
     document.getElementById('pwd')?.addEventListener('keypress', e => { if(e.key==='Enter') check(); });
   </script>
 </body>
