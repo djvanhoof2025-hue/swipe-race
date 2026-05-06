@@ -1,130 +1,70 @@
-const socket = io();
-let currentTeam = 'boys';
-let mySwipes = 0;
-let gameStarted = false;
-let serverIp = '127.0.0.1';
-let serverPort = '3000';
+const io = io();
+let team = 'boys', swipes = 0, run = false;
 
-// Шаги
-function goStep(id) {
+// QR
+async function boot() {
+  try {
+    const r = await fetch('/api/ip');
+    const { ip, port } = await r.json();
+    document.getElementById('url-g').textContent = `http://${ip}:${port}`;
+    new QRCode('qr-w', { text:'WIFI:T:WPA;S:SwipeRace;P:game1234;;', width:150, height:150, margin:2 });
+    new QRCode('qr-g', { text:`http://${ip}:${port}`, width:150, height:150, margin:2 });
+  } catch(e) {
+    document.getElementById('qr-w').innerHTML = '<p style="color:#f87171">QR не загрузился. Обновите страницу.</p>';
+  }
+}
+boot();
+
+// UI
+window.to = id => {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-}
+};
+window.pick = t => {
+  team = t;
+  document.querySelectorAll('.tb').forEach(b => b.classList.remove('sel'));
+  document.querySelector(`.tb.${t==='boys'?'b':'g'}`).classList.add('sel');
+};
+window.join = () => {
+  const n = document.getElementById('nm').value.trim() || 'Игрок';
+  io.emit('join', { name: n, team });
+  document.getElementById('ui-wait').classList.add('hide');
+  document.getElementById('ui-ready').classList.remove('hide');
+};
 
-// Инициализация QR
-async function initQR() {
-  try {
-    const res = await fetch('/api/ip');
-    const data = await res.json();
-    serverIp = data.ip; serverPort = data.port;
-    document.getElementById('server-url').textContent = `http://${serverIp}:${serverPort}`;
-    
-    // WiFi QR
-    const wifiStr = `WIFI:T:WPA;S:SwipeRace;P:game1234;;`;
-    QRCode.toCanvas(document.createElement('canvas'), wifiStr, { width: 180 }, (err, canvas) => {
-      if(!err) document.getElementById('wifi-qr').appendChild(canvas);
-    });
-    
-    // Game QR
-    const gameUrl = `http://${serverIp}:${serverPort}`;
-    QRCode.toCanvas(document.createElement('canvas'), gameUrl, { width: 180 }, (err, canvas) => {
-      if(!err) document.getElementById('game-qr').appendChild(canvas);
-    });
-  } catch(e) {
-    console.warn('Авто-IP не найден, используй ручной ввод');
+// Sockets
+io.on('playersCount', ({boys, girls}) => {
+  document.getElementById('cb').textContent = boys;
+  document.getElementById('cg').textContent = girls;
+});
+io.on('start', () => {
+  run = true;
+  document.getElementById('ui-ready').classList.add('hide');
+  document.getElementById('ui-play').classList.remove('hide');
+});
+io.on('score', ({team: t, count}) => {
+  const p = Math.min(count/50, 1);
+  document.getElementById(t==='boys'?'blb':'blg').style.left = `${5 + p*80}%`;
+});
+io.on('gameOver', ({winner}) => {
+  run = false;
+  document.getElementById('ui-play').innerHTML = `<h2 style="font-size:1.5rem">🏆 ${winner==='boys'?'👦 Мальчики':'👧 Девочки'} победили!</h2>`;
+});
+io.on('reset', () => location.reload());
+
+// Swipe
+let sy = 0;
+const z = document.getElementById('ui-play');
+z.addEventListener('touchstart', e => { sy = e.touches[0].clientY; e.preventDefault(); }, {passive:false});
+z.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+z.addEventListener('touchend', e => {
+  if(run && sy - e.changedTouches[0].clientY > 35) {
+    swipes++; document.getElementById('mc').textContent = swipes;
+    const b = document.createElement('div'); b.className='burst'; b.textContent=team==='boys'?'💧':'🌸';
+    z.appendChild(b); setTimeout(()=>b.remove(), 500);
+    io.emit('swipe', {team});
   }
-}
-initQR();
-
-function applyManualIp() {
-  const ip = document.getElementById('manual-ip').value.trim();
-  if(!ip) return;
-  serverIp = ip;
-  document.getElementById('server-url').textContent = `http://${serverIp}:${serverPort}`;
-  document.getElementById('game-qr').innerHTML = '';
-  QRCode.toCanvas(document.createElement('canvas'), `http://${serverIp}:${serverPort}`, { width: 180 }, (err, canvas) => {
-    if(!err) document.getElementById('game-qr').appendChild(canvas);
-  });
-}
-
-function selectTeam(t) {
-  currentTeam = t;
-  document.querySelectorAll('.team-opt').forEach(o => o.classList.remove('selected'));
-  document.querySelector(`.team-opt.${t}`).classList.add('selected');
-}
-
-function joinLobby() {
-  const name = document.getElementById('player-name').value.trim() || 'Игрок';
-  socket.emit('join', { name, team: currentTeam });
-  document.getElementById('lobby-ui').style.display = 'none';
-  document.getElementById('waiting-ui').style.display = 'block';
-}
-
-function startGameClient() {
-  goStep('step-play');
-}
-
-// Сокеты
-socket.on('playersCount', ({ boys, girls, list }) => {
-  document.getElementById('count-boys').textContent = boys;
-  document.getElementById('count-girls').textContent = girls;
-  if(document.getElementById('waiting-ui').style.display === 'block') {
-    document.getElementById('ready-text').textContent = `Подключилось: ${boys + playersCount()}`;
-  }
+  e.preventDefault();
 });
-
-socket.on('start', () => {
-  gameStarted = true;
-  document.getElementById('waiting-ui').style.display = 'none';
-  document.getElementById('swipe-zone').style.display = 'flex';
-  document.getElementById('swipe-zone').className = `swipe-zone ${currentTeam}`;
-});
-
-socket.on('score', ({ team, count }) => {
-  const progress = Math.min(count / 50, 1);
-  const left = 5 + (progress * 80) + '%';
-  document.getElementById(team === 'boys' ? 'ball-boys' : 'ball-girls').style.left = left;
-});
-
-socket.on('gameOver', ({ winner }) => {
-  gameStarted = false;
-  document.getElementById('swipe-zone').innerHTML = `<div class="winner-text">🏆 ${winner === 'boys' ? '👦 Мальчики' : '👧 Девочки'} победили!</div>`;
-});
-
-socket.on('reset', () => location.reload());
-socket.on('error', msg => alert(msg));
-socket.on('adminOk', msg => console.log(msg));
-
-// Свайпы (iOS Safe)
-let startY = 0;
-const zone = document.getElementById('swipe-zone');
-
-if(zone) {
-  zone.addEventListener('touchstart', e => { startY = e.touches[0].clientY; e.preventDefault(); }, { passive: false });
-  zone.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
-  zone.addEventListener('touchend', e => {
-    if (startY - e.changedTouches[0].clientY > 50 && gameStarted) {
-      mySwipes++;
-      document.getElementById('my-swipes').textContent = mySwipes;
-      createBurst();
-      socket.emit('swipe', { team: currentTeam });
-    }
-    e.preventDefault();
-  });
-  // Mouse fallback
-  zone.addEventListener('mousedown', e => startY = e.clientY);
-  zone.addEventListener('mouseup', e => {
-    if (startY - e.clientY > 50 && gameStarted) {
-      mySwipes++; document.getElementById('my-swipes').textContent = mySwipes; createBurst();
-      socket.emit('swipe', { team: currentTeam });
-    }
-  });
-}
-
-function createBurst() {
-  const b = document.createElement('div');
-  b.className = 'burst';
-  b.textContent = currentTeam === 'boys' ? '💧' : '🌸';
-  zone.appendChild(b);
-  setTimeout(() => b.remove(), 600);
-}
+z.addEventListener('mousedown', e => sy = e.clientY);
+z.addEventListener('mouseup', e => { if(run && sy - e.clientY > 35) { swipes++; document.getElementById('mc').textContent=swipes; io.emit('swipe', {team}); }});
