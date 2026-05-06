@@ -3,26 +3,241 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Панель ведущего</title>
+  <title>🎛️ Панель ведущего</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .admin-container { padding: 20px; max-width: 600px; margin: 0 auto; }
+    .admin-card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(10px);
+      padding: 25px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    
+    .stat-row { display: flex; justify-content: space-between; padding: 12px 0; }
+    .stat-label { opacity: 0.7; }
+    .stat-value { font-weight: bold; font-size: 18px; }
+    .stat-value.boys { color: #4facfe; }
+    .stat-value.girls { color: #ff6b6b; }
+    
+    .player-list { max-height: 150px; overflow-y: auto; font-size: 14px; }
+    .player-item { padding: 8px 0; display: flex; justify-content: space-between; }
+    
+    .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+    .ctrl-btn {
+      padding: 14px; border: none; border-radius: 12px;
+      font-weight: bold; cursor: pointer; transition: 0.2s;
+    }
+    .ctrl-btn:active { transform: scale(0.98); }
+    .btn-start { background: linear-gradient(90deg, #10b981, #34d399); color: white; }
+    .btn-reset { background: linear-gradient(90deg, #ef4444, #f87171); color: white; }
+    .btn-demo { background: linear-gradient(90deg, #8b5cf6, #a78bfa); color: white; grid-column: span 2; }
+    .btn-setup { background: rgba(255,255,255,0.15); color: white; width: 100%; margin-top: 10px; }
+    
+    .password-input {
+      width: 100%; padding: 12px; margin: 10px 0;
+      background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2);
+      color: white; border-radius: 8px; font-size: 16px;
+    }
+    
+    .demo-panel {
+      background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3);
+      padding: 15px; border-radius: 12px; margin-top: 15px;
+    }
+    .demo-btns { display: flex; gap: 10px; margin-top: 10px; }
+    .demo-btn {
+      flex: 1; padding: 10px; border: none; border-radius: 8px;
+      background: rgba(255,255,255,0.1); color: white; cursor: pointer;
+    }
+    .demo-btn.boys { background: rgba(79,172,254,0.2); }
+    .demo-btn.girls { background: rgba(255,107,107,0.2); }
+    
+    .status-badge {
+      display: inline-block; padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: bold; margin-left: 10px;
+    }
+    .status-lobby { background: rgba(255,255,255,0.2); }
+    .status-playing { background: #10b981; color: white; }
+    .status-finished { background: #f59e0b; color: white; }
+    
+    #passwordSection { text-align: center; padding: 40px 20px; }
+    #adminContent { display: none; }
+  </style>
 </head>
 <body>
   <div class="bg-layer"></div>
-  <div id="adminScreen" class="screen active">
-    <div class="admin-card">
-      <h2 style="text-align:center">🎛️ Панель ведущего</h2>
-      <div class="stat-grid">
-        <div class="stat-box">👦 Мальчиков<div class="stat-val" id="admBoys">0</div></div>
-        <div class="stat-box">👧 Девочек<div class="stat-val" id="admGirls">0</div></div>
-        <div class="stat-box">Свайпов (синие)<div class="stat-val" id="admBoysSwipes" style="color:#4facfe">0</div></div>
-        <div class="stat-box">Свайпов (розовые)<div class="stat-val" id="admGirlsSwipes" style="color:#ff6b6b">0</div></div>
+  <div class="admin-container">
+    
+    <!-- Вход по паролю -->
+    <div id="passwordSection" class="admin-card">
+      <h2 style="text-align:center; margin-bottom:20px">🔐 Вход для ведущего</h2>
+      <input type="password" id="adminPwd" class="password-input" placeholder="Введите пароль">
+      <button class="ctrl-btn btn-start" style="width:100%" onclick="checkPassword()">Войти</button>
+      <p id="pwdError" style="color:#ef4444; margin-top:10px; display:none">❌ Неверный пароль</p>
+    </div>
+
+    <!-- Основной контент админки -->
+    <div id="adminContent">
+      
+      <!-- Статус игры -->
+      <div class="admin-card">
+        <h3 style="margin-bottom:15px">📊 Статус игры</h3>
+        <div class="stat-row">
+          <span class="stat-label">Состояние</span>
+          <span>
+            <span id="gameStatus">Ожидание</span>
+            <span class="status-badge status-lobby" id="statusBadge">LOBBY</span>
+          </span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">👦 Мальчики</span>
+          <span class="stat-value boys" id="statBoys">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">👧 Девочки</span>
+          <span class="stat-value girls" id="statGirls">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🔵 Свайпов (синие)</span>
+          <span class="stat-value boys" id="statBoysSwipes">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">🔴 Свайпов (розовые)</span>
+          <span class="stat-value girls" id="statGirlsSwipes">0</span>
+        </div>
       </div>
-      <button class="ctrl-btn btn-start" id="btnStart">▶️ Начать игру</button>
-      <button class="ctrl-btn btn-reset" id="btnReset">🔄 Сбросить</button>
-      <button class="ctrl-btn btn-qr" onclick="location.href='/'">📱 Назад к QR</button>
+
+      <!-- Список игроков -->
+      <div class="admin-card">
+        <h3 style="margin-bottom:15px">👥 Игроки онлайн</h3>
+        <div class="player-list" id="playerList">
+          <div style="opacity:0.5; text-align:center">Нет подключённых игроков</div>
+        </div>
+      </div>
+
+      <!-- Управление -->
+      <div class="admin-card">
+        <h3 style="margin-bottom:15px">🎮 Управление</h3>
+        <div class="btn-group">
+          <button class="ctrl-btn btn-start" id="btnStart" onclick="sendAdmin('start')">▶️ Старт</button>
+          <button class="ctrl-btn btn-reset" id="btnReset" onclick="sendAdmin('reset')">🔄 Сброс</button>
+        </div>
+        
+        <!-- Демо-режим -->
+        <div class="demo-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <strong>🎭 Демо-режим</strong>
+            <small style="opacity:0.7">Тест без игроков</small>
+          </div>
+          <div class="demo-btns">
+            <button class="demo-btn boys" onclick="sendAdmin('demo', 'boys')">+1 👦</button>
+            <button class="demo-btn girls" onclick="sendAdmin('demo', 'girls')">+1 👧</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Навигация -->
+      <button class="ctrl-btn btn-setup" onclick="location.href='/setup'">
+        🔗 Вернуться к настройке (два QR)
+      </button>
+      <button class="ctrl-btn btn-setup" style="background:rgba(255,255,255,0.05)" onclick="location.href='/'">
+        🏠 На главную
+      </button>
+
     </div>
   </div>
+
   <script src="/socket.io/socket.io.js"></script>
-  <script src="game.js"></script>
+  <script>
+    const socket = io();
+    let password = '';
+
+    function checkPassword() {
+      password = document.getElementById('adminPwd').value;
+      if (password === '3793') {
+        document.getElementById('passwordSection').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        document.getElementById('pwdError').style.display = 'none';
+      } else {
+        document.getElementById('pwdError').style.display = 'block';
+      }
+    }
+
+    function sendAdmin(action, team = null) {
+      socket.emit('admin', { action, password, team });
+    }
+
+    // Обновление статистики
+    socket.on('playersCount', ({ boys, girls, list }) => {
+      document.getElementById('statBoys').textContent = boys;
+      document.getElementById('statGirls').textContent = girls;
+      
+      const listEl = document.getElementById('playerList');
+      if (list?.length) {
+        listEl.innerHTML = list.map(p => 
+          `<div class="player-item">
+            <span>${p.name}</span>
+            <span style="color:${p.team==='boys'?'#4facfe':'#ff6b6b'}">
+              ${p.team==='boys'?'👦':'👧'}
+            </span>
+          </div>`
+        ).join('');
+      } else {
+        listEl.innerHTML = '<div style="opacity:0.5; text-align:center">Нет подключённых игроков</div>';
+      }
+    });
+
+    socket.on('score', ({ team, count }) => {
+      if (team === 'boys') {
+        document.getElementById('statBoysSwipes').textContent = count;
+      } else {
+        document.getElementById('statGirlsSwipes').textContent = count;
+      }
+    });
+
+    socket.on('start', () => {
+      updateStatus('playing', 'Игра идёт! 🔥');
+    });
+
+    socket.on('reset', () => {
+      updateStatus('lobby', 'Ожидание');
+      document.getElementById('statBoysSwipes').textContent = '0';
+      document.getElementById('statGirlsSwipes').textContent = '0';
+    });
+
+    socket.on('gameOver', ({ winner }) => {
+      updateStatus('finished', `🏆 ${winner==='boys'?'👦 Мальчики':'👧 Девочки'} победили!`);
+    });
+
+    socket.on('adminOk', ({ message }) => {
+      // Визуальная обратная связь
+      const btn = event?.target;
+      if(btn) {
+        const original = btn.textContent;
+        btn.textContent = '✅ ' + message;
+        setTimeout(() => btn.textContent = original, 1500);
+      }
+    });
+
+    socket.on('adminError', msg => {
+      alert(msg);
+    });
+
+    function updateStatus(state, text) {
+      const statusEl = document.getElementById('gameStatus');
+      const badge = document.getElementById('statusBadge');
+      
+      statusEl.textContent = text;
+      badge.textContent = state.toUpperCase();
+      badge.className = 'status-badge status-' + state;
+    }
+
+    // Enter для пароля
+    document.getElementById('adminPwd')?.addEventListener('keypress', e => {
+      if(e.key === 'Enter') checkPassword();
+    });
+  </script>
 </body>
 </html>
