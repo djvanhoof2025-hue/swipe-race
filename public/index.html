@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Swipe Race</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg-layer"></div>
+
+  <!-- QR -->
+  <div id="qrScreen" class="screen active">
+    <div class="qr-card">
+      <h2>🎮 Swipe Race</h2>
+      <p style="opacity:0.6; margin:10px 0">Отсканируй QR для подключения</p>
+      <img src="/qr.png" class="qr-img" alt="QR">
+      <p style="font-size:12px; opacity:0.5; margin-top:10px">Или открой http://<span id="ipAddr">localhost</span>:3000</p>
+      <a href="/admin.html" class="admin-link">🔐 Панель ведущего</a>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div id="loginScreen" class="screen">
+    <div class="login-card">
+      <h2 style="text-align:center; margin-bottom:20px">👋 Привет!</h2>
+      <input type="text" id="playerName" class="input-field" placeholder="Твоё имя" value="Игрок">
+      <div class="team-select">
+        <div class="team-option boys selected" data-team="boys">
+          <div style="font-size:28px">👦</div>
+          <div>Мальчики</div>
+        </div>
+        <div class="team-option girls" data-team="girls">
+          <div style="font-size:28px">👧</div>
+          <div>Девочки</div>
+        </div>
+      </div>
+      <button class="join-btn" id="joinBtn">Войти в игру 🚀</button>
+    </div>
+  </div>
+
+  <!-- Game -->
+  <div id="gameScreen" class="screen">
+    <div class="game-header">
+      <div class="counter boys">👦 <span id="countBoys">0</span></div>
+      <div class="counter girls">👧 <span id="countGirls">0</span></div>
+    </div>
+    <div class="track-wrap">
+      <div class="track">
+        <div class="track-line"></div>
+        <div class="ball boys" id="ballBoys"></div>
+        <div class="ball girls" id="ballGirls"></div>
+        <div class="finish-line"></div>
+      </div>
+    </div>
+    <div id="waitingMsg" style="text-align:center; padding:20px; opacity:0.7; display:none;">
+      <div style="font-size:40px; margin-bottom:10px">⏳</div>
+      Ждём старта от ведущего...
+    </div>
+    <div class="swipe-zone boys" id="swipeZone">
+      <div class="swipe-count" id="swipeCount">0</div>
+      <div class="swipe-hint">⬆️</div>
+      <div class="swipe-text">Свайпай вверх!<br>Помоги своей команде</div>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div id="gameOverScreen" class="screen">
+    <div class="winner-card">
+      <div class="winner-icon">🏆</div>
+      <div class="winner-title">Победили!</div>
+      <div class="winner-team" id="winnerTeam"></div>
+      <button class="join-btn" onclick="location.reload='/'">Новая игра</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
