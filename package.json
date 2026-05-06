@@ -1,11 +1,10 @@
 {
   "name": "swipe-race",
-  "version": "2.0.0",
-  "description": "Boys vs Girls - Two QR Flow",
+  "version": "3.0.0",
+  "description": "Boys vs Girls - Step Flow",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",

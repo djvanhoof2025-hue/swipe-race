@@ -8,72 +8,80 @@
 </head>
 <body>
   <div class="bg-layer"></div>
-
-  <!-- QR -->
-  <div id="qrScreen" class="screen active">
-    <div class="qr-card">
-      <h2>🎮 Swipe Race</h2>
-      <p style="opacity:0.6; margin:10px 0">Отсканируй QR для подключения</p>
-      <img src="/qr.png" class="qr-img" alt="QR">
-      <p style="font-size:12px; opacity:0.5; margin-top:10px">Или открой http://<span id="ipAddr">localhost</span>:3000</p>
-      <a href="/admin.html" class="admin-link">🔐 Панель ведущего</a>
-    </div>
-  </div>
-
-  <!-- Login -->
-  <div id="loginScreen" class="screen">
-    <div class="login-card">
-      <h2 style="text-align:center; margin-bottom:20px">👋 Привет!</h2>
-      <input type="text" id="playerName" class="input-field" placeholder="Твоё имя" value="Игрок">
-      <div class="team-select">
-        <div class="team-option boys selected" data-team="boys">
-          <div style="font-size:28px">👦</div>
-          <div>Мальчики</div>
-        </div>
-        <div class="team-option girls" data-team="girls">
-          <div style="font-size:28px">👧</div>
-          <div>Девочки</div>
-        </div>
-      </div>
-      <button class="join-btn" id="joinBtn">Войти в игру 🚀</button>
-    </div>
-  </div>
-
-  <!-- Game -->
-  <div id="gameScreen" class="screen">
-    <div class="game-header">
-      <div class="counter boys">👦 <span id="countBoys">0</span></div>
-      <div class="counter girls">👧 <span id="countGirls">0</span></div>
-    </div>
-    <div class="track-wrap">
-      <div class="track">
-        <div class="track-line"></div>
-        <div class="ball boys" id="ballBoys"></div>
-        <div class="ball girls" id="ballGirls"></div>
-        <div class="finish-line"></div>
+  <div class="container">
+    
+    <!-- ШАГ 1: WiFi -->
+    <div id="step-wifi" class="step active">
+      <div class="card">
+        <div class="step-badge">ШАГ 1 из 2</div>
+        <h2>📶 Подключись к Wi-Fi</h2>
+        <div id="wifi-qr" class="qr-box"></div>
+        <p class="info">Сеть: <b id="wifi-ssid">SwipeRace</b><br>Пароль: <b id="wifi-pass">game1234</b></p>
+        <details class="settings">
+          <summary>⚙️ Не подключается? Настроить IP</summary>
+          <input type="text" id="manual-ip" placeholder="Введи IP телефона (напр. 192.168.43.1)">
+          <button class="btn secondary" onclick="applyManualIp()">Применить</button>
+        </details>
+        <button class="btn primary" onclick="goStep('step-game')">Далее ➡️</button>
       </div>
     </div>
-    <div id="waitingMsg" style="text-align:center; padding:20px; opacity:0.7; display:none;">
-      <div style="font-size:40px; margin-bottom:10px">⏳</div>
-      Ждём старта от ведущего...
+
+    <!-- ШАГ 2: Игра -->
+    <div id="step-game" class="step">
+      <div class="card">
+        <div class="step-badge">ШАГ 2 из 2</div>
+        <h2>🌐 Подключись к игре</h2>
+        <div id="game-qr" class="qr-box"></div>
+        <p class="info">Адрес: <span id="server-url">...</span></p>
+        <button class="btn success" onclick="startGameClient()">🚀 Войти в игру</button>
+        <button class="btn secondary" onclick="goStep('step-wifi')">⬅️ Назад</button>
+      </div>
     </div>
-    <div class="swipe-zone boys" id="swipeZone">
-      <div class="swipe-count" id="swipeCount">0</div>
-      <div class="swipe-hint">⬆️</div>
-      <div class="swipe-text">Свайпай вверх!<br>Помоги своей команде</div>
+
+    <!-- ШАГ 3: Лобби / Игра -->
+    <div id="step-play" class="step">
+      <div class="game-header">
+        <div class="counter boys">👦 <span id="count-boys">0</span></div>
+        <div class="counter girls">👧 <span id="count-girls">0</span></div>
+      </div>
+      <div class="track-wrap">
+        <div class="track">
+          <div class="track-line"></div>
+          <div class="ball boys" id="ball-boys"></div>
+          <div class="ball girls" id="ball-girls"></div>
+          <div class="finish-line"></div>
+        </div>
+      </div>
+      
+      <div id="lobby-ui">
+        <div class="loader"></div>
+        <h3>Ожидание игроков...</h3>
+        <p>Выбери команду и нажми "Готов"</p>
+        <div class="team-select">
+          <div class="team-opt boys" onclick="selectTeam('boys')">👦 Мальчики</div>
+          <div class="team-opt girls" onclick="selectTeam('girls')">👧 Девочки</div>
+        </div>
+        <input type="text" id="player-name" placeholder="Твоё имя" value="Игрок">
+        <button class="btn success" onclick="joinLobby()">✅ Я готов</button>
+      </div>
+
+      <div id="waiting-ui" style="display:none; text-align:center; padding:20px;">
+        <div class="loader"></div>
+        <h3>⏳ Ждём старт от ведущего</h3>
+        <p id="ready-text"></p>
+      </div>
+
+      <div class="swipe-zone" id="swipe-zone" style="display:none;">
+        <div class="swipe-count" id="my-swipes">0</div>
+        <div class="swipe-hint">⬆️</div>
+        <div class="swipe-text">Свайпай вверх!</div>
+      </div>
+      
+      <button class="btn secondary" style="margin-top:10px" onclick="location.reload()">🔄 В начало</button>
     </div>
   </div>
 
-  <!-- Game Over -->
-  <div id="gameOverScreen" class="screen">
-    <div class="winner-card">
-      <div class="winner-icon">🏆</div>
-      <div class="winner-title">Победили!</div>
-      <div class="winner-team" id="winnerTeam"></div>
-      <button class="join-btn" onclick="location.reload='/'">Новая игра</button>
-    </div>
-  </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
 </body>

@@ -1,153 +1,130 @@
-const socket = io({ reconnection: true });
+const socket = io();
 let currentTeam = 'boys';
 let mySwipes = 0;
 let gameStarted = false;
+let serverIp = '127.0.0.1';
+let serverPort = '3000';
 
-// Инициализация частиц
-function initParticles() {
-  const bg = document.querySelector('.bg-layer');
-  for(let i=0; i<30; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    p.style.left = Math.random() * 100 + 'vw';
-    p.style.animationDuration = (8 + Math.random() * 8) + 's';
-    p.style.animationDelay = Math.random() * 5 + 's';
-    bg.appendChild(p);
+// Шаги
+function goStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// Инициализация QR
+async function initQR() {
+  try {
+    const res = await fetch('/api/ip');
+    const data = await res.json();
+    serverIp = data.ip; serverPort = data.port;
+    document.getElementById('server-url').textContent = `http://${serverIp}:${serverPort}`;
+    
+    // WiFi QR
+    const wifiStr = `WIFI:T:WPA;S:SwipeRace;P:game1234;;`;
+    QRCode.toCanvas(document.createElement('canvas'), wifiStr, { width: 180 }, (err, canvas) => {
+      if(!err) document.getElementById('wifi-qr').appendChild(canvas);
+    });
+    
+    // Game QR
+    const gameUrl = `http://${serverIp}:${serverPort}`;
+    QRCode.toCanvas(document.createElement('canvas'), gameUrl, { width: 180 }, (err, canvas) => {
+      if(!err) document.getElementById('game-qr').appendChild(canvas);
+    });
+  } catch(e) {
+    console.warn('Авто-IP не найден, используй ручной ввод');
   }
 }
-initParticles();
+initQR();
 
-// UI Elements
-const screens = document.querySelectorAll('.screen');
-const swipeZone = document.getElementById('swipeZone');
-const ballBoys = document.getElementById('ballBoys');
-const ballGirls = document.getElementById('ballGirls');
-const waitingMsg = document.getElementById('waitingMsg');
-
-function showScreen(id) {
-  screens.forEach(s => s.classList.remove('active'));
-  const target = document.getElementById(id);
-  if(target) target.classList.add('active');
+function applyManualIp() {
+  const ip = document.getElementById('manual-ip').value.trim();
+  if(!ip) return;
+  serverIp = ip;
+  document.getElementById('server-url').textContent = `http://${serverIp}:${serverPort}`;
+  document.getElementById('game-qr').innerHTML = '';
+  QRCode.toCanvas(document.createElement('canvas'), `http://${serverIp}:${serverPort}`, { width: 180 }, (err, canvas) => {
+    if(!err) document.getElementById('game-qr').appendChild(canvas);
+  });
 }
 
-// Выбор команды
-document.querySelectorAll('.team-option').forEach(opt => {
-  opt.onclick = () => {
-    document.querySelectorAll('.team-option').forEach(o => o.classList.remove('selected'));
-    opt.classList.add('selected');
-    currentTeam = opt.dataset.team;
-  };
-});
+function selectTeam(t) {
+  currentTeam = t;
+  document.querySelectorAll('.team-opt').forEach(o => o.classList.remove('selected'));
+  document.querySelector(`.team-opt.${t}`).classList.add('selected');
+}
 
-// Вход
-document.getElementById('joinBtn').onclick = () => {
-  const name = document.getElementById('playerName').value.trim() || 'Игрок';
+function joinLobby() {
+  const name = document.getElementById('player-name').value.trim() || 'Игрок';
   socket.emit('join', { name, team: currentTeam });
-  showScreen('gameScreen');
-};
+  document.getElementById('lobby-ui').style.display = 'none';
+  document.getElementById('waiting-ui').style.display = 'block';
+}
 
-// Обновление UI игроков
-socket.on('playersCount', ({ boys, girls }) => {
-  const bEl = document.getElementById('countBoys');
-  const gEl = document.getElementById('countGirls');
-  if(bEl) bEl.textContent = boys;
-  if(gEl) gEl.textContent = girls;
-  const admB = document.getElementById('admBoys');
-  const admG = document.getElementById('admGirls');
-  if(admB) admB.textContent = boys;
-  if(admG) admG.textContent = girls;
+function startGameClient() {
+  goStep('step-play');
+}
+
+// Сокеты
+socket.on('playersCount', ({ boys, girls, list }) => {
+  document.getElementById('count-boys').textContent = boys;
+  document.getElementById('count-girls').textContent = girls;
+  if(document.getElementById('waiting-ui').style.display === 'block') {
+    document.getElementById('ready-text').textContent = `Подключилось: ${boys + playersCount()}`;
+  }
 });
 
-// События игры
 socket.on('start', () => {
   gameStarted = true;
-  if(waitingMsg) waitingMsg.style.display = 'none';
-  if(swipeZone) swipeZone.style.borderColor = currentTeam === 'boys' ? 'rgba(79,172,254,0.6)' : 'rgba(255,107,107,0.6)';
+  document.getElementById('waiting-ui').style.display = 'none';
+  document.getElementById('swipe-zone').style.display = 'flex';
+  document.getElementById('swipe-zone').className = `swipe-zone ${currentTeam}`;
 });
 
 socket.on('score', ({ team, count }) => {
   const progress = Math.min(count / 50, 1);
   const left = 5 + (progress * 80) + '%';
-  
-  if(team === 'boys') ballBoys.style.left = left;
-  else ballGirls.style.left = left;
-
-  if(document.getElementById('admBoysSwipes')) {
-    document.getElementById('admBoysSwipes').textContent = team === 'boys' ? count : document.getElementById('admBoysSwipes').textContent;
-    document.getElementById('admGirlsSwipes').textContent = team === 'girls' ? count : document.getElementById('admGirlsSwipes').textContent;
-  }
+  document.getElementById(team === 'boys' ? 'ball-boys' : 'ball-girls').style.left = left;
 });
 
 socket.on('gameOver', ({ winner }) => {
-  const wt = document.getElementById('winnerTeam');
-  wt.textContent = winner === 'boys' ? '👦 МАЛЬЧИКИ' : '👧 ДЕВОЧКИ';
-  wt.className = `winner-team ${winner}`;
-  showScreen('gameOverScreen');
+  gameStarted = false;
+  document.getElementById('swipe-zone').innerHTML = `<div class="winner-text">🏆 ${winner === 'boys' ? '👦 Мальчики' : '👧 Девочки'} победили!</div>`;
 });
 
-socket.on('reset', () => {
-  location.reload();
-});
-
+socket.on('reset', () => location.reload());
 socket.on('error', msg => alert(msg));
+socket.on('adminOk', msg => console.log(msg));
 
-// SWIPE LOGIC (iOS Safe)
+// Свайпы (iOS Safe)
 let startY = 0;
-if(swipeZone) {
-  swipeZone.addEventListener('touchstart', e => {
-    startY = e.touches[0].clientY;
-    e.preventDefault();
-  }, { passive: false });
+const zone = document.getElementById('swipe-zone');
 
-  swipeZone.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
-
-  swipeZone.addEventListener('touchend', e => {
-    const endY = e.changedTouches[0].clientY;
-    if (startY - endY > 50 && gameStarted) {
-      performSwipe();
+if(zone) {
+  zone.addEventListener('touchstart', e => { startY = e.touches[0].clientY; e.preventDefault(); }, { passive: false });
+  zone.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  zone.addEventListener('touchend', e => {
+    if (startY - e.changedTouches[0].clientY > 50 && gameStarted) {
+      mySwipes++;
+      document.getElementById('my-swipes').textContent = mySwipes;
+      createBurst();
+      socket.emit('swipe', { team: currentTeam });
     }
     e.preventDefault();
   });
-  
   // Mouse fallback
-  swipeZone.addEventListener('mousedown', e => startY = e.clientY);
-  swipeZone.addEventListener('mouseup', e => {
-    if(startY - e.clientY > 50 && gameStarted) performSwipe();
+  zone.addEventListener('mousedown', e => startY = e.clientY);
+  zone.addEventListener('mouseup', e => {
+    if (startY - e.clientY > 50 && gameStarted) {
+      mySwipes++; document.getElementById('my-swipes').textContent = mySwipes; createBurst();
+      socket.emit('swipe', { team: currentTeam });
+    }
   });
 }
 
-function performSwipe() {
-  mySwipes++;
-  const cnt = document.getElementById('swipeCount');
-  if(cnt) cnt.textContent = mySwipes;
-  
-  // Визуальный эффект взрыва
-  const burst = document.createElement('div');
-  burst.className = 'swipe-burst';
-  burst.textContent = currentTeam === 'boys' ? '💧' : '🌸';
-  burst.style.left = '50%';
-  burst.style.top = '60%';
-  swipeZone.appendChild(burst);
-  setTimeout(() => burst.remove(), 600);
-
-  socket.emit('swipe', { team: currentTeam });
+function createBurst() {
+  const b = document.createElement('div');
+  b.className = 'burst';
+  b.textContent = currentTeam === 'boys' ? '💧' : '🌸';
+  zone.appendChild(b);
+  setTimeout(() => b.remove(), 600);
 }
-
-// Admin controls
-const btnStart = document.getElementById('btnStart');
-const btnReset = document.getElementById('btnReset');
-
-if(btnStart) {
-  btnStart.onclick = () => {
-    const pwd = prompt('Пароль ведущего:', '');
-    socket.emit('admin', { action: 'start', password: pwd });
-  };
-}
-if(btnReset) {
-  btnReset.onclick = () => {
-    const pwd = prompt('Пароль ведущего:', '');
-    socket.emit('admin', { action: 'reset', password: pwd });
-  };
-}
-
-socket.on('adminError', msg => alert(msg));
